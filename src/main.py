@@ -6,7 +6,9 @@ import os
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
+ROUTE_NUM = 25
 ROUTE_FILE = 'route25_potential_and_real_stops'
+RIDERSHIP_FILE = 'Stop_Riders_Ranking_by_Route_Daily_Totals_May_2019'
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -30,10 +32,15 @@ def is_int(n):
     except:
         return False
 
-def train_lin_reg(route):
+def train_lin_reg(data):
+    # extract the stop data for the current route
+    route = data[ROUTE_FILE]
     cur_route = route.loc[route['CorrespondingStopID'].notnull()]
-
     print(cur_route)
+
+    ridership = data[RIDERSHIP_FILE]
+    cur_ridership = ridership.loc[ridership['IndividRoute'] == ROUTE_NUM]
+    print(cur_ridership)
 
     reg = LinearRegression() 
 
@@ -42,7 +49,8 @@ def main():
     
     data = parse_data(args.input)
     
-    train_lin_reg(data[ROUTE_FILE])
+    train_lin_reg(data)
+
 
 if __name__ == '__main__':
     main()
