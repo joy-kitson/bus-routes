@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-import pandas as pd
 import glob
 import os
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+
+ROUTE_FILE = 'route25_potential_and_real_stops'
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -20,11 +23,26 @@ def parse_data(files):
 
     return data
 
+def is_int(n):
+    try:
+        int(n)
+        return True
+    except:
+        return False
+
+def train_lin_reg(route):
+    cur_route = route.loc[route['CorrespondingStopID'].notnull()]
+
+    print(cur_route)
+
+    reg = LinearRegression() 
+
 def main():
     args = parse_args()
     
     data = parse_data(args.input)
-    print(data)
+    
+    train_lin_reg(data[ROUTE_FILE])
 
 if __name__ == '__main__':
     main()
