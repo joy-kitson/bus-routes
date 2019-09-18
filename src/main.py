@@ -33,16 +33,41 @@ def is_int(n):
         return False
 
 def train_lin_reg(data):
-    # extract the stop data for the current route
+    #extract the stop data for the current route
     route = data[ROUTE_FILE]
     cur_route = route.loc[route['CorrespondingStopID'].notnull()]
+    cur_route.loc[:,'CorrespondingStopID'] = cur_route['CorrespondingStopID'].apply(int) 
+    #cur_route.loc[:,'Transfer'] = cur_route['Transfer'].apply(lambda s: s == 'Yes')
     print(cur_route)
 
+    #extract the ridership data for the current route
     ridership = data[RIDERSHIP_FILE]
     cur_ridership = ridership.loc[ridership['IndividRoute'] == ROUTE_NUM]
     print(cur_ridership)
 
-    reg = LinearRegression() 
+    #we need a single colun name to merge on, so make sure we call the stop id
+    #the same thing in both dataframes
+    cur_ridership['CorrespondingStopID'] = cur_ridership['UNIQUE_STOP_NUMBER']
+    cur_route_ridership = cur_ridership.merge(route, on='CorrespondingStopID')
+    print(cur_route_ridership)
+
+    #select our dependent and independent variables
+    i_cols = [
+        'Est_TotPop',
+        'Est_TotMinority',
+        'Est_TotPov',
+        'Est_TotLEP',
+        'Est_TotPop_Density',
+        #'Transfer'
+    ]
+    indeps = cur_route_ridership[i_cols] 
+    dep = cur_route_ridership['TOTAL']
+
+    #train the model
+    reg = LinearRegression()
+    reg.fit(indeps, dep)
+
+    print(reg.score(indeps, dep))
 
 def main():
     args = parse_args()
