@@ -81,7 +81,7 @@ def train_model(data, init_model=LinearRegression):
     print(reg.score(indeps, dep))
     print(cur_route_ridership.dtypes)
 
-    plt.savefig('fit.png') 
+    plt.savefig('../plots/fit.png') 
 
 def main():
     args = parse_args()
