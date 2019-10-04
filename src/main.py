@@ -85,6 +85,81 @@ def main():
     toolbox.register("mutate", tools.mutFlipBit, args.ind_mut_prob)
     toolbox.register("select", tools.selTournament, args.tournament_size)
 
+    print("Start of evolution")
+    pop = toolbox.population(n=args.pop_size)
+
+    # Evaluate the entire population
+    fitnesses = [toolbox.evaluate(ind) for ind in pop]
+    for ind, fit in zip(pop, fitnesses):
+        ind.fitness.values = fit
+
+    # Extracting all the fitnesses of the individuals
+    fits = [ind.fitness.values[0] for ind in pop]
+
+    # Variable keeping track of the number of generations
+    g = 0
+
+    # Begin the evolution
+    while g < args.num_iterations:
+        # A new generation
+        g = g + 1
+        # print("-- Generation %i --" % g)
+
+        # Select the next generation individuals
+        offspring = toolbox.select(pop, len(pop))
+        # Clone the selected individuals
+        offspring = [toolbox.clone(ind) for ind in offspring]
+
+        # Apply crossover and mutation on the offspring
+        for child1, child2 in zip(offspring[::2], offspring[1::2]):
+
+            # cross two individuals with probability CXPB
+            if random.random() < CXPB:
+                toolbox.mate(child1, child2)
+
+                # fitness values of the children
+                # must be recalculated later
+                del child1.fitness.values
+                del child2.fitness.values
+
+        for mutant in offspring:
+
+            # mutate an individual with probability MUTPB
+            if random.random() < MUTPB:
+                toolbox.mutate(mutant)
+                del mutant.fitness.values
+
+        # Evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        fitnesses = map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+
+        # print("Evaluated %i individuals" % len(invalid_ind))
+
+        # The population is entirely replaced by the offspring
+        pop[:] = offspring
+
+        # Gather all the fitnesses in one list and print the stats
+        fits = [ind.fitness.values[0] for ind in pop]
+
+        length = len(pop)
+        mean = sum(fits) / length
+        sum2 = sum(x*x for x in fits)
+        std = abs(sum2 / length - mean**2)**0.5
+
+        '''
+        print("  Min %s" % min(fits))
+        print("  Max %s" % max(fits))
+        print("  Avg %s" % mean)
+        print("  Std %s" % std)
+        '''
+
+    print("-- End of evolution --")
+
+    best_ind = tools.selBest(pop, 1)[0]
+    print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
+
 
 if __name__ == '__main__':
     main()
