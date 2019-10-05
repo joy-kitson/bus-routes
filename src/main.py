@@ -3,6 +3,7 @@
 import argparse
 import random
 import pickle
+import os
 
 from deap import base, creator, tools
 
@@ -23,32 +24,46 @@ def parse_args():
     '''
     parser = argparse.ArgumentParser()
 
+    # Positional args:
     parser.add_argument('util_weight', type=float, nargs=1,
                         help='The weight of the utilization in the route score')
 
+    # Optional args:
+     
+    # parameters for genetic algorithm
     parser.add_argument('-ps', '--pop_size',
                         type=int, nargs=1, default=500,
                         help='The population size for the genetic algorithm')
-
     parser.add_argument('-t', '--num_iterations',
                         type=int, nargs=1, default=1000,
                         help='The population size for the genetic algorithm')
-
     parser.add_argument('-mp', '--sol_mut_prob',
                         type=float, nargs=1, default=0.2,
                         help='The mutation probability for entire solutions for the genetic algorithm')
-
     parser.add_argument('-indpb', '--ind_mut_prob',
                         type=float, nargs=1, default=0.05,
                         help='The mutation probability for individual genes in a solution for the genetic algorithm')
-
     parser.add_argument('-cp', '--crossover_prob',
                         type=float, nargs=1, default=0.5,
                         help='The crossover probability for the genetic algorithm')
-
     parser.add_argument('-ts', '--tournament_size',
                         type=int, nargs=1, default=3,
                         help='The tournament size for the genetic algorithm')
+
+    # paths for various files
+    parser.add_argument('-d_p', '--demo_path',
+                         nargs=1, default=os.path.join('..', 'data', 'demographics.csv'),
+                         help='The path to the csv file containing the demographic data')
+    parser.add_argument('-r_p', '--rider_path',
+                         nargs=1, default=os.path.join('..', 'data', 'ridership.csv'),
+                         help='The path to the csv file containing the ridership data')
+    parser.add_argument('-s_p', '--stops_path',
+                         nargs=1, default=os.path.join('..', 'data', 'stops.csv'),
+                         help='The path to the csv file containg all of the potential and current'\
+                              + ' stops')
+    parser.add_argument('-c_p', '--cache_path', nargs=1, default=os.path.join('..', 'cache'),
+                         help='The path to the directory in which to load and store the cached utility'\
+                              + ' and travel time matrices')
 
     return parser.parse_args()
 
@@ -62,7 +77,7 @@ def main():
     args = parse_args()
 
     time_estimate.load()
-    util_estimate.load()
+    util_estimate.load(args)
 
     original_util = util_estimate.get_utilization(CURRENT_ROUTE)
     original_time = time_estimate.get_time(CURRENT_ROUTE)
