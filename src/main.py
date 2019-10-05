@@ -51,16 +51,18 @@ def parse_args():
                         help='The tournament size for the genetic algorithm')
 
     # paths for various files
-    parser.add_argument('-d_p', '--demo_path',
-                         nargs=1, default=os.path.join('..', 'data', 'demographics.csv'),
-                         help='The path to the csv file containing the demographic data')
-    parser.add_argument('-r_p', '--rider_path',
-                         nargs=1, default=os.path.join('..', 'data', 'ridership.csv'),
-                         help='The path to the csv file containing the ridership data')
     parser.add_argument('-s_p', '--stops_path',
-                         nargs=1, default=os.path.join('..', 'data', 'stops.csv'),
+                         nargs=1, default=os.path.join('..', 'data',
+                                                       'route25_potential_and_real_stops.csv'),
                          help='The path to the csv file containg all of the potential and current'\
                               + ' stops')
+    parser.add_argument('-d_p', '--demo_path',
+                         nargs=1, default=os.path.join('..', 'data', 'DemoByStops.csv'),
+                         help='The path to the csv file containing the demographic data')
+    parser.add_argument('-r_p', '--rider_path',
+                         nargs=1, default=os.path.join('..', 'data',
+                                                       'Stop_Riders_Ranking_by_Route_Daily_Totals_May_2019.csv'),
+                         help='The path to the csv file containing the ridership data')
     parser.add_argument('-c_p', '--cache_path', nargs=1, default=os.path.join('..', 'cache'),
                          help='The path to the directory in which to load and store the cached utility'\
                               + ' and travel time matrices')
