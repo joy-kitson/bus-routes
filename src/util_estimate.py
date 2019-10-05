@@ -1,5 +1,6 @@
 import pickle
 
+UTIL_FILE = 'util.pkl'
 util_matrix = None
 
 
@@ -7,9 +8,9 @@ def create_util_matrix():
     pass
 
 
-def load():
+def load(args):
     try:
-        with open('..//models//time_models//time_matrix.pkl') as f:
+        with open(args.cache_path) as f:
             util_matrix = pickle.load(f)
     except:
         print("Utilization matrix not found, creating one now")
