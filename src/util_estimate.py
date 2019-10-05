@@ -1,6 +1,7 @@
 import pickle
 import os
 import pandas as pd
+import numpy as np
 from sklearn.linear_model import LinearRegression
 
 UTIL_FILE = 'util.pkl'
@@ -30,16 +31,21 @@ def create_util_matrix(args, init_model=LinearRegression):
     # set up the data so we can build our model
     training_data = pd.merge(demo_data, ridership_data, on='StopId')
     training_data.dropna(inplace=True)
-    indeps = training_data[['Est_Pop_Density_SqMile']]
+    indep_cols = ['Est_Pop_Density_SqMile']
+    indeps = training_data[indep_cols]
     dep = training_data['IndividUtilization']
-
-    print(indeps)
-    print(dep)
 
     model = init_model()
     model.fit(indeps, dep)
-    print(model.score(indeps, dep))
+    print('Model trained with R^2 = {}'.format(model.score(indeps, dep)))
 
+    utils = model.predict(stop_data[indep_cols])
+    # TODO: finish getting actual ridership data for existing stops
+    for i, row in stop_data.iterrows():
+        if not np.isnan(row['CorrespondingStopID']):
+            utils[i] 
+
+    return utils
 
 def load(args):
     try:
