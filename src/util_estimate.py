@@ -1,21 +1,25 @@
 import pickle
 import os
 import pandas as pd
+from sklearn.linear_model import LinearRegression
 
 UTIL_FILE = 'util.pkl'
 util_matrix = None
 
 
-def create_util_matrix(args):
+def create_util_matrix(args, init_model=LinearRegression):
     # parse the stop data
     stop_data = pd.read_csv(args.stops_path,
                             usecols=['Est_TotPop_Density','CorrespondingStopID', 'Transfer'])
     #stop_data.dropna(inplace=True)
-    stop_data.rename(columns={'CorrespondingStopID': 'StopId'}, inplace=True)
-    
+    stop_data.rename(columns={'CorrespondingStopID': 'StopId',
+                              'Est_TotPop_Density': 'Est_Pop_Density_SqMile'},
+                     inplace=True)
+
     # parse the demographic data
     demo_data = pd.read_csv(args.demo_path,
                             usecols=['StopId','Routes', 'Est_Pop_Density_SqMile'])
+    demo_data['Est_Pop_Density_SqMile'] = demo_data['Est_Pop_Density_SqMile'].astype(float)
 
     # parse the ridership data
     ridership_data = pd.read_csv(args.rider_path,
@@ -23,7 +27,19 @@ def create_util_matrix(args):
     ridership_data.rename(columns={'StopID': 'StopId'}, inplace=True)
     ridership_data['IndividUtilization'] = ridership_data['IndividUtilization'].astype(float)
     
-    
+    # set up the data so we can build our model
+    training_data = pd.merge(demo_data, ridership_data, on='StopId')
+    training_data.dropna(inplace=True)
+    indeps = training_data[['Est_Pop_Density_SqMile']]
+    dep = training_data['IndividUtilization']
+
+    print(indeps)
+    print(dep)
+
+    model = init_model()
+    model.fit(indeps, dep)
+    print(model.score(indeps, dep))
+
 
 def load(args):
     try:
