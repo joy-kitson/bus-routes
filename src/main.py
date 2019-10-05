@@ -1,101 +1,164 @@
-#!/usr/bin/env python3
-
-import numpy as np
-import math
 import argparse
-import glob
-import os
-import pandas as pd
-from sklearn.linear_model import LinearRegression, LogisticRegression
-import matplotlib.pyplot as plt
-from sklearn.linear_model import Ridge
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.pipeline import make_pipeline
+import random
+import pickle
 
-ROUTE_NUM = 25
-ROUTE_FILE = 'route25_potential_and_real_stops'
-RIDERSHIP_FILE = 'Stop_Riders_Ranking_by_Route_Daily_Totals_May_2019'
+from deap import base, creator, tools
+
+import util_estimate
+import time_estimate
+
+random.seed(42)
+CURRENT_ROUTE = []  # fill this in with real current route
+NUM_STOPS = len(CURRENT_ROUTE)
 
 
 def parse_args():
+    '''
+    Defines the parser for the command line arguments of the file
+
+    Returns:
+        Namespace object containing command line arguments
+    '''
     parser = argparse.ArgumentParser()
 
-    # optional arguments
-    parser.add_argument('-i', '--input', nargs='+',
-                        default=glob.glob('../data/*.csv'),
-                        help='a list of csv files to parse for input data')
+    parser.add_argument('util_weight', type=float, nargs=1,
+                        help='The weight of the utilization in the route score')
+
+    parser.add_argument('-ps', '--pop_size',
+                        type=int, nargs=1, default=500,
+                        help='The population size for the genetic algorithm')
+
+    parser.add_argument('-t', '--num_iterations',
+                        type=int, nargs=1, default=1000,
+                        help='The population size for the genetic algorithm')
+
+    parser.add_argument('-mp', '--sol_mut_prob',
+                        type=float, nargs=1, default=0.2,
+                        help='The mutation probability for entire solutions for the genetic algorithm')
+
+    parser.add_argument('-indpb', '--ind_mut_prob',
+                        type=float, nargs=1, default=0.05,
+                        help='The mutation probability for individual genes in a solution for the genetic algorithm')
+
+    parser.add_argument('-cp', '--crossover_prob',
+                        type=float, nargs=1, default=0.5,
+                        help='The crossover probability for the genetic algorithm')
+
+    parser.add_argument('-ts', '--tournament_size',
+                        type=int, nargs=1, default=3,
+                        help='The tournament size for the genetic algorithm')
 
     return parser.parse_args()
 
 
-def parse_data(files):
-    # load csv files and parse them in pandas dataframes
-    data = {os.path.basename(f).split('.')[0]: pd.read_csv(f) for f in files}
-
-    return data
-
-
-def is_int(n):
-    try:
-        int(n)
-        return True
-    except:
-        return False
-
-
-def train_model(data, init_model=LinearRegression):
-    # extract the stop data for the current route
-    route = data[ROUTE_FILE]
-    cur_route = route.loc[route['CorrespondingStopID'].notnull()]
-    cur_route.loc[:,'CorrespondingStopID'] = cur_route['CorrespondingStopID'].apply(int) 
-    # cur_route['Transfer'] = cur_route['Transfer'].astype(bool)
-    print(cur_route)
-
-    # extract the ridership data for the current route
-    ridership = data[RIDERSHIP_FILE]
-    cur_ridership = ridership.loc[ridership['IndividRoute'] == ROUTE_NUM]
-    cur_ridership['TOTAL'] = pd.to_numeric(cur_ridership['TOTAL'])
-    print(cur_ridership)
-
-    # we need a single column name to merge on, so make sure we call the stop
-    # id the same thing in both dataframes
-    cur_ridership['CorrespondingStopID'] = cur_ridership['UNIQUE_STOP_NUMBER']
-    cur_route_ridership = cur_ridership.merge(route, on='CorrespondingStopID')
-    print(cur_route_ridership)
-
-    # select our dependent and independent variables
-    i_cols = [
-        'Est_TotPop',
-        # 'Est_TotMinority',
-        # 'Est_TotPov',
-        # 'Est_TotLEP',
-        # 'Est_TotPop_Density',
-        # 'Transfer'
-    ]
-    indeps = cur_route_ridership[i_cols] 
-    dep = cur_route_ridership['TOTAL']
-
-    # train the model
-    reg = init_model()
-    reg.fit(indeps, dep)
-
-    cur_route_ridership['Predicted'] = reg.predict(indeps)
-    ax = cur_route_ridership.plot(x='Est_TotPop', y='Predicted', kind='line', color='r')
-    cur_route_ridership.plot(x='Est_TotPop', y='TOTAL', kind='scatter', ax=ax)
-
-    print(reg.score(indeps, dep))
-    print(cur_route_ridership.dtypes)
-
-    plt.savefig('../plots/fit.png') 
+def route_score(candidade_route, original_util, original_time):
+    return (util_estimate.get_utilization(candidade_route) / original_util,
+            original_time / time_estimate.get_time(candidade_route))
 
 
 def main():
     args = parse_args()
 
-    data = parse_data(args.input)
+    time_estimate.load()
+    util_estimate.load()
 
-    train_model(data)
-    # train_model(data, init_model=lambda : make_pipeline(PolynomialFeatures(3), Ridge()))
+    original_util = util_estimate.get_utilization(CURRENT_ROUTE)
+    original_time = time_estimate.get_time(CURRENT_ROUTE)
+
+    # Register fitness measure and individual type with creator
+    creator.create("Route_Fitness", base.Fitness,
+                   weights=(args.util_weight, 1.0 - args.util_weight))
+    creator.create("Individual", list, fitness=creator.Route_Fitness)
+
+    toolbox = base.Toolbox()
+
+    # Add attribute, individual, and population types to toolbox
+    toolbox.register("attr_bool", random.randint, 0, 1)
+    toolbox.register("individual", tools.initRepeat, creator.Individual,
+                     toolbox.attr_bool, NUM_STOPS)
+    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+    # Add evaluation, crossover, mutation, and selection to toolbox
+    toolbox.register("evaluate", route_score, original_util, util_matrix,
+                     original_time, time_matrix)
+    toolbox.register("crossover", tools.cxTwoPoint)
+    toolbox.register("mutate", tools.mutFlipBit, args.ind_mut_prob)
+    toolbox.register("select", tools.selTournament, args.tournament_size)
+
+    print("Start of evolution")
+    pop = toolbox.population(n=args.pop_size)
+
+    # Evaluate the entire population
+    fitnesses = [toolbox.evaluate(ind) for ind in pop]
+    for ind, fit in zip(pop, fitnesses):
+        ind.fitness.values = fit
+
+    # Extracting all the fitnesses of the individuals
+    fits = [ind.fitness.values[0] for ind in pop]
+
+    # Variable keeping track of the number of generations
+    g = 0
+
+    # Begin the evolution
+    while g < args.num_iterations:
+        # A new generation
+        g = g + 1
+        # print("-- Generation %i --" % g)
+
+        # Select the next generation individuals
+        offspring = toolbox.select(pop, len(pop))
+        # Clone the selected individuals
+        offspring = [toolbox.clone(ind) for ind in offspring]
+
+        # Apply crossover and mutation on the offspring
+        for child1, child2 in zip(offspring[::2], offspring[1::2]):
+
+            # cross two individuals with probability CXPB
+            if random.random() < CXPB:
+                toolbox.mate(child1, child2)
+
+                # fitness values of the children
+                # must be recalculated later
+                del child1.fitness.values
+                del child2.fitness.values
+
+        for mutant in offspring:
+
+            # mutate an individual with probability MUTPB
+            if random.random() < MUTPB:
+                toolbox.mutate(mutant)
+                del mutant.fitness.values
+
+        # Evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        fitnesses = map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+
+        # print("Evaluated %i individuals" % len(invalid_ind))
+
+        # The population is entirely replaced by the offspring
+        pop[:] = offspring
+
+        # Gather all the fitnesses in one list and print the stats
+        fits = [ind.fitness.values[0] for ind in pop]
+
+        length = len(pop)
+        mean = sum(fits) / length
+        sum2 = sum(x*x for x in fits)
+        std = abs(sum2 / length - mean**2)**0.5
+
+        '''
+        print("  Min %s" % min(fits))
+        print("  Max %s" % max(fits))
+        print("  Avg %s" % mean)
+        print("  Std %s" % std)
+        '''
+
+    print("-- End of evolution --")
+
+    best_ind = tools.selBest(pop, 1)[0]
+    print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
 
 
 if __name__ == '__main__':
