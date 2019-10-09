@@ -27,7 +27,7 @@ def create_util_matrix(args, init_model=LinearRegression):
                                  usecols=['StopID','IndividUtilization','IndividRoute','NumberOfRoutes'])
     ridership_data.rename(columns={'StopID': 'StopId'}, inplace=True)
     ridership_data['IndividUtilization'] = ridership_data['IndividUtilization'].astype(float)
-    
+
     # set up the data so we can build our model
     training_data = pd.merge(demo_data, ridership_data, on='StopId')
     training_data.dropna(inplace=True)
@@ -42,18 +42,21 @@ def create_util_matrix(args, init_model=LinearRegression):
     utils = model.predict(stop_data[indep_cols])
     # TODO: finish getting actual ridership data for existing stops
     for i, row in stop_data.iterrows():
-        if not np.isnan(row['CorrespondingStopID']):
-            utils[i] 
+        if not np.isnan(row['StopId']):
+            utils[i] = ridership_data[ridership_data['StopId'] == row['StopId']]['IndividUtilization'].values[0]
 
     return utils
 
 def load(args):
+    global util_matrix
+    
     try:
         with open(os.path.join(args.cache_path, UTIL_FILE)) as f:
             util_matrix = pickle.load(f)
     except:
         print("Utilization matrix not found, creating one now")
         util_matrix = create_util_matrix(args)
+        #print(util_matrix)
         print('Utilization matrix created')
 
 
