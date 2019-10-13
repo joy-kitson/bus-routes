@@ -47,6 +47,7 @@ def create_util_matrix(args, init_model=LinearRegression):
 
     return utils
 
+
 def load(args):
     try:
         with open(os.path.join(args.cache_path, UTIL_FILE)) as f:
