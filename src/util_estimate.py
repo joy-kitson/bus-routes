@@ -11,10 +11,10 @@ util_matrix = None
 def create_util_matrix(args, init_model=LinearRegression):
     # parse the stop data
     stop_data = pd.read_csv(args.stops_path,
-                            usecols=['Est_TotPop_Density','CorrespondingStopID', 'Transfer'])
+                            usecols=['Est_TotPop_Density','Transfer', 'Id2'])
     #stop_data.dropna(inplace=True)
-    stop_data.rename(columns={'CorrespondingStopID': 'StopId',
-                              'Est_TotPop_Density': 'Est_Pop_Density_SqMile'},
+    stop_data.rename(columns={'Est_TotPop_Density': 'Est_Pop_Density_SqMile',
+                              'Id2': 'Formatted FIPS'},
                      inplace=True)
 
     # parse the demographic data
@@ -24,7 +24,7 @@ def create_util_matrix(args, init_model=LinearRegression):
 
     #parse the employment data
     emp_data = pd.read_csv(args.emp_path,
-                           usecols=['StopId', 'NumberWorkers'])
+                           usecols=['StopId', 'NumberWorkers', 'Formatted FIPS'])
 
     # parse the ridership data
     ridership_data = pd.read_csv(args.rider_path,
@@ -45,7 +45,7 @@ def create_util_matrix(args, init_model=LinearRegression):
     print('Model trained with R^2 = {}'.format(model.score(indeps, dep)))
 
     #merge in extra demographic data for the stops
-    #stop_data = pd.merge(stop_data, emp_data, on='')
+    stop_data = pd.merge(stop_data, emp_data, on='Formatted FIPS')
     
     utils = model.predict(stop_data[indep_cols])
     # TODO: finish getting actual ridership data for existing stops
