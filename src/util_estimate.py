@@ -8,7 +8,7 @@ UTIL_FILE = 'util.pkl'
 util_matrix = None
 
 
-def create_util_matrix(args, init_model=LinearRegression):
+def create_util_matrix(args, init_model=LinearRegression, preprocessing=None):
     # parse the stop data
     stop_data = pd.read_csv(args.stops_path,
                             usecols=['Est_TotPop_Density','Transfer', 'Id2'])
@@ -24,7 +24,12 @@ def create_util_matrix(args, init_model=LinearRegression):
 
     #parse the employment data
     emp_data = pd.read_csv(args.emp_path,
-                           usecols=['StopId', 'NumberWorkers', 'Formatted FIPS'])
+                           usecols=['StopId', 'NumberWorkers', 'Formatted FIPS',
+                                    'Est_TotPov_PostRemovedDupIntersects',
+                                    'Est_TotLEP_PostRemovedDupIntersects',
+                                    'Est_TotMinority_PostRemovedDupIntersects',
+                                    ]
+    )
 
     # parse the ridership data
     ridership_data = pd.read_csv(args.rider_path,
@@ -35,8 +40,23 @@ def create_util_matrix(args, init_model=LinearRegression):
     # set up the data so we can build our model
     training_data = pd.merge(demo_data, emp_data, on='StopId')
     training_data = pd.merge(training_data, ridership_data, on='StopId')
+    indep_cols = [
+        'Est_Pop_Density_SqMile',
+        'NumberWorkers',
+        'Est_TotPov_PostRemovedDupIntersects',
+        'Est_TotLEP_PostRemovedDupIntersects',
+        'Est_TotMinority_PostRemovedDupIntersects',
+    ]
+    dep_col = 'IndividUtilization'
+
+    # perform preprocessing
+    if preprocessing:        
+        training_data[indep_cols + [dep_col]] = \
+                training_data[indep_cols + [dep_col]].apply(preprocessing)
+        training_data.replace([np.inf, -np.inf], np.nan, inplace=True)
+    
     training_data.dropna(inplace=True)
-    indep_cols = ['Est_Pop_Density_SqMile', 'NumberWorkers']
+    
     indeps = training_data[indep_cols]
     dep = training_data['IndividUtilization']
 
@@ -64,7 +84,7 @@ def load(args):
             util_matrix = pickle.load(f)
     except:
         print("Utilization matrix not found, creating one now")
-        util_matrix = create_util_matrix(args)
+        util_matrix = create_util_matrix(args, preprocessing=np.log)
         print('Utilization matrix created')
 
 
