@@ -22,6 +22,10 @@ def create_util_matrix(args, init_model=LinearRegression):
                             usecols=['StopId','Routes', 'Est_Pop_Density_SqMile'])
     demo_data['Est_Pop_Density_SqMile'] = demo_data['Est_Pop_Density_SqMile'].astype(float)
 
+    #parse the employment data
+    emp_data = pd.read_csv(args.emp_path,
+                           usecols=['StopId', 'NumberWorkers'])
+
     # parse the ridership data
     ridership_data = pd.read_csv(args.rider_path,
                                  usecols=['StopID','IndividUtilization','IndividRoute','NumberOfRoutes'])
@@ -29,9 +33,10 @@ def create_util_matrix(args, init_model=LinearRegression):
     ridership_data['IndividUtilization'] = ridership_data['IndividUtilization'].astype(float)
 
     # set up the data so we can build our model
-    training_data = pd.merge(demo_data, ridership_data, on='StopId')
+    training_data = pd.merge(demo_data, emp_data, on='StopId')
+    training_data = pd.merge(training_data, ridership_data, on='StopId')
     training_data.dropna(inplace=True)
-    indep_cols = ['Est_Pop_Density_SqMile']
+    indep_cols = ['Est_Pop_Density_SqMile', 'NumberWorkers']
     indeps = training_data[indep_cols]
     dep = training_data['IndividUtilization']
 
@@ -39,6 +44,9 @@ def create_util_matrix(args, init_model=LinearRegression):
     model.fit(indeps, dep)
     print('Model trained with R^2 = {}'.format(model.score(indeps, dep)))
 
+    #merge in extra demographic data for the stops
+    #stop_data = pd.merge(stop_data, emp_data, on='')
+    
     utils = model.predict(stop_data[indep_cols])
     # TODO: finish getting actual ridership data for existing stops
     for i, row in stop_data.iterrows():
@@ -48,6 +56,7 @@ def create_util_matrix(args, init_model=LinearRegression):
     return utils
 
 def load(args):
+    # We assign util_matrix a value within this function, so we need to explicit state that it's global
     global util_matrix
     
     try:
@@ -56,7 +65,6 @@ def load(args):
     except:
         print("Utilization matrix not found, creating one now")
         util_matrix = create_util_matrix(args)
-        #print(util_matrix)
         print('Utilization matrix created')
 
 

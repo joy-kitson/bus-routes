@@ -59,6 +59,9 @@ def parse_args():
     parser.add_argument('-d_p', '--demo_path',
                          nargs=1, default=os.path.join('..', 'data', 'DemoByStops.csv'),
                          help='The path to the csv file containing the demographic data')
+    parser.add_argument('-e_p', '--emp_path',
+                         nargs=1, default=os.path.join('..', 'data', 'Potential_Stops_wEmployment.csv'),
+                         help='The path to the csv file containing the employment data')
     parser.add_argument('-r_p', '--rider_path',
                          nargs=1, default=os.path.join('..', 'data',
                                                        'Stop_Riders_Ranking_by_Route_Daily_Totals_May_2019.csv'),
