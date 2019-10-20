@@ -2,13 +2,18 @@ import pickle
 import os
 import pandas as pd
 import numpy as np
+from copy import deepcopy
+
 from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.model_selection import KFold
+from sklearn.metrics import mean_absolute_error
 
 UTIL_FILE = 'util.pkl'
 util_matrix = None
 
 
-def create_util_matrix(args, init_model=LinearRegression, preprocessing=None):
+def create_util_matrix(args, model=LinearRegression(), preprocessing=None):
     # parse the stop data
     stop_data = pd.read_csv(args.stops_path,
                             usecols=['Est_TotPop_Density','Transfer', 'Id2'])
@@ -60,9 +65,19 @@ def create_util_matrix(args, init_model=LinearRegression, preprocessing=None):
     indeps = training_data[indep_cols]
     dep = training_data['IndividUtilization']
 
-    model = init_model()
+    # perform k-fold cross validation to get our R^2 value
+    kf = KFold(n_splits=10)
+    abs_err = 0
+    for train_indices, test_indices in kf.split(indeps):
+        fold_model = deepcopy(model)
+        fold_model.fit(indeps.iloc[train_indices], dep.iloc[train_indices])
+        fold_preds = fold_model.predict(indeps.iloc[test_indices])
+        abs_err += mean_absolute_error(dep.iloc[test_indices], fold_preds)
+    n_folds = kf.get_n_splits(indeps)
+    abs_err /= n_folds
+    print('Model trained with mean absolute error of {} across {} folds'.format(abs_err, n_folds))
+
     model.fit(indeps, dep)
-    print('Model trained with R^2 = {}'.format(model.score(indeps, dep)))
 
     #merge in extra demographic data for the stops
     stop_data = pd.merge(stop_data, emp_data, on='Formatted FIPS')
@@ -84,7 +99,11 @@ def load(args):
             util_matrix = pickle.load(f)
     except:
         print("Utilization matrix not found, creating one now")
-        util_matrix = create_util_matrix(args, preprocessing=np.log)
+        #util_matrix = create_util_matrix(args, preprocessing=np.log)
+        util_matrix = create_util_matrix(args, model=KNeighborsRegressor(n_neighbors=5, \
+                                                                         weights='distance', \
+                                                                         p=2, \
+                                                                         n_jobs=-1))
         print('Utilization matrix created')
 
 
