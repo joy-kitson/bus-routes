@@ -5,14 +5,15 @@ import random
 import pickle
 import os
 
+import pandas as pd
+import numpy as np
+
 from deap import base, creator, tools
 
 import util_estimate
 import time_estimate
 
 random.seed(42)
-CURRENT_ROUTE = []  # fill this in with real current route
-NUM_STOPS = len(CURRENT_ROUTE)
 
 
 def parse_args():
@@ -29,7 +30,7 @@ def parse_args():
                         help='The weight of the utilization in the route score')
 
     # Optional args:
-     
+
     # parameters for genetic algorithm
     parser.add_argument('-ps', '--pop_size',
                         type=int, nargs=1, default=500,
@@ -53,7 +54,7 @@ def parse_args():
     # paths for various files
     parser.add_argument('-s_p', '--stops_path',
                          nargs=1, default=os.path.join('..', 'data',
-                                                       'route25_potential_and_real_stops.csv'),
+                                                       'route_25_valid.csv'),
                          help='The path to the csv file containg all of the potential and current'\
                               + ' stops')
     parser.add_argument('-d_p', '--demo_path',
@@ -73,19 +74,43 @@ def parse_args():
     return parser.parse_args()
 
 
-def route_score(candidade_route, original_util, original_time):
-    return (util_estimate.get_utilization(candidade_route) / original_util,
-            original_time / time_estimate.get_time(candidade_route))
+def valid_route(potential_route, distances):
+    last_stop = 0
+    for index, value in enumerate(potential_route):
+        if value == 1:
+            next_stop = distances[index]
+            diff = next_stop - last_stop
+            if diff < 500:
+                return False
+            else:
+                last_stop = next_stop
+    return True
+
+
+def route_score(candidade_route, original_util, original_time, distances):
+    if valid_route(candidade_route, distances):
+        return (util_estimate.get_utilization(candidade_route) / original_util,
+                original_time / time_estimate.get_time(candidade_route))
+    else:
+        return (0, 0)
 
 
 def main():
     args = parse_args()
 
-    time_estimate.load()
+    r25 = pd.read_csv(args.stops_path)
+
+    current_route = list(np.logical_not(np.isnan(r25[r25['Transfer'] == 'No']['CorrespondingStopID'].values)).astype(int))
+    NUM_STOPS = len(current_route)
+
+    non_transfer_distances = list(r25[r25['Transfer'] == 'No']['Distance from initial stop (feet)'])
+    # transfer_distances = list(r25[r25['Transfer'] == 'Yes']['Distance from initial stop (feet)'])
+
+    time_estimate.load(args)
     util_estimate.load(args)
 
-    original_util = util_estimate.get_utilization(CURRENT_ROUTE)
-    original_time = time_estimate.get_time(CURRENT_ROUTE)
+    original_util = util_estimate.get_utilization(current_route)
+    original_time = time_estimate.get_time(current_route)
 
     # Register fitness measure and individual type with creator
     creator.create("Route_Fitness", base.Fitness,
@@ -101,8 +126,8 @@ def main():
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
     # Add evaluation, crossover, mutation, and selection to toolbox
-    toolbox.register("evaluate", route_score, original_util, util_matrix,
-                     original_time, time_matrix)
+    toolbox.register("evaluate", route_score, original_util, original_time,
+                     non_transfer_distances)
     toolbox.register("crossover", tools.cxTwoPoint)
     toolbox.register("mutate", tools.mutFlipBit, args.ind_mut_prob)
     toolbox.register("select", tools.selTournament, args.tournament_size)

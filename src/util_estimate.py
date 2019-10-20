@@ -90,6 +90,7 @@ def create_util_matrix(args, model=LinearRegression(), preprocessing=None):
 
     return utils
 
+
 def load(args):
     # We assign util_matrix a value within this function, so we need to explicit state that it's global
     global util_matrix
