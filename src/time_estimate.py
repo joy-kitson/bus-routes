@@ -7,7 +7,7 @@ def create_time_matrix():
     pass
 
 
-def load():
+def load(args):
     try:
         with open('..//models//time_models//time_matrix.pkl') as f:
             time_matrix = pickle.load(f)
