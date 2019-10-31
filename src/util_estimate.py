@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 from copy import deepcopy
+import matplotlib.pyplot as plt
 
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
@@ -10,11 +11,28 @@ from sklearn.model_selection import KFold
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
 
+from yellowbrick.regressor import ResidualsPlot
+
 UTIL_FILE = 'util.pkl'
-util_matrix = None
+util_matrix = None        
+UTIL_ESTIMATORS = {
+    'linreg': LinearRegression(n_jobs=-1),
+    'knn': KNeighborsRegressor(
+        n_neighbors=5,
+        weights='distance',
+        p=2,
+        n_jobs=-1
+    ),
+    'forest': RandomForestRegressor(\
+        n_estimators=100, \
+        criterion='mae',\
+        min_samples_leaf=.005,\
+        #max_depth=8,\
+        n_jobs=-1
+    ),
+}
 
-
-def create_util_matrix(args, model=LinearRegression(n_jobs=-1), preprocessing=None):
+def create_util_matrix(args, model, preprocessing=None):
     # parse the stop data
     stop_data = pd.read_csv(args.stops_path,
                             usecols=['Est_TotPop_Density','Transfer', 'Id2'])
@@ -81,6 +99,11 @@ def create_util_matrix(args, model=LinearRegression(n_jobs=-1), preprocessing=No
     model.fit(indeps, dep)
     print('On full data set, model has an R^2 value of {}'.format(model.score(indeps, dep)))
 
+    vis = ResidualsPlot(model)
+    vis.score(indeps, dep)
+    vis.finalize()
+    plt.savefig(os.path.join('..', 'plots', 'util_resids.png'))
+
     #merge in extra demographic data for the stops
     stop_data = pd.merge(stop_data, emp_data, on='Formatted FIPS')
     
@@ -102,17 +125,7 @@ def load(args):
             util_matrix = pickle.load(f)
     except:
         print("Utilization matrix not found, creating one now")
-        #util_matrix = create_util_matrix(args)
-        #util_matrix = create_util_matrix(args, model=KNeighborsRegressor(n_neighbors=5, \
-        #                                                                 weights='distance', \
-        #                                                                 p=2, \
-        #                                                                 n_jobs=-1))
-        util_matrix = create_util_matrix(args, model=RandomForestRegressor(\
-                                                     n_estimators=100, \
-                                                     criterion='mae',\
-                                                     #min_samples_leaf=3,\
-                                                     max_depth=8,\
-                                                     n_jobs=-1))
+        util_matrix = create_util_matrix(args, UTIL_ESTIMATORS[args.util_estimator])
         print('Utilization matrix created')
 
 

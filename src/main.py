@@ -51,6 +51,11 @@ def parse_args():
                         type=int, nargs=1, default=3,
                         help='The tournament size for the genetic algorithm')
 
+    # arguments for utilisation estimation
+    parser.add_argument('-ue', '--util_estimator', choices=util_estimate.UTIL_ESTIMATORS.keys(),
+                        default='forest',
+                        help='Specifies which method to use to estimate stop utilization')
+
     # paths for various files
     parser.add_argument('-s_p', '--stops_path',
                          nargs=1, default=os.path.join('..', 'data',
