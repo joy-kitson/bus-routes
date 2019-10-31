@@ -32,6 +32,7 @@ UTIL_ESTIMATORS = {
     ),
 }
 
+
 def create_util_matrix(args, model, preprocessing=None):
     # parse the stop data
     stop_data = pd.read_csv(args.stops_path,
@@ -130,8 +131,4 @@ def load(args):
 
 
 def get_utilization(route):
-    if util_matrix is None:
-        raise(ValueError('You have not yet loaded the utilization matrix'))
-    else:
-        # Eventually replace with code to return utilization
-        pass
+    return sum(route) * 4

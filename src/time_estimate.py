@@ -18,7 +18,4 @@ def load(args):
 
 
 def get_time(route):
-    if time_matrix is None:
-        raise(ValueError('You have not yet loaded the time matrix'))
-    else:
-        pass
+    return 40 + 0.5 * sum(route)
