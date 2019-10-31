@@ -37,7 +37,7 @@ def parse_args():
                         type=int, nargs=1, default=400,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-t', '--num_iterations',
-                        type=int, nargs=1, default=50,
+                        type=int, nargs=1, default=600,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-mp', '--sol_mut_prob',
                         type=float, nargs=1, default=0.2,
@@ -97,10 +97,11 @@ def route_score(candidade_route, util_weight=0.5, original_util=1, original_time
 
 def log_results(folder_path, mins, maxes, means, st_devs, best_solution):
     now = datetime.now()
-    filename = now.strftime('results_%m_%d_%H_%M.txt')
-    path = os.path.join(folder_path, filename)
-    print(path)
-    with open(path, 'w') as f:
+    filename = now.strftime('results_%m_%d_%H_%M')
+    txt_path = os.path.join(folder_path, filename + '.txt')
+    csv_path = os.path.join(folder_path, filename + '.csv')
+
+    with open(txt_path, 'w') as f:
         f.write('Route 25 Optimization\n')
         f.write(now.strftime('Run on %m/%d at %H:%M\n'))
         f.write(f'Best route: {best_solution}\n')
@@ -111,6 +112,13 @@ def log_results(folder_path, mins, maxes, means, st_devs, best_solution):
             f.write(f'------------------- Generation {index} -------------------\n')
             f.write(f'Min fitness: {gen_min}, Max fitness: {gen_max}\n')
             f.write(f'Average Fitness: {gen_mean}, Fitness Standard Deviation: {gen_std}\n')
+
+    results = pd.DataFrame({'Generation': list(range(len(mins))),
+                            'Min Score': mins,
+                            'Max Score': maxes,
+                            'Mean Score': means,
+                            'Standard Deviation': st_devs})
+    results.to_csv(csv_path, index=False)
 
 
 def main():
