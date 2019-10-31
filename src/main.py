@@ -4,6 +4,7 @@ import argparse
 import random
 import pickle
 import os
+from datetime import datetime
 
 import pandas as pd
 import numpy as np
@@ -36,7 +37,7 @@ def parse_args():
                         type=int, nargs=1, default=400,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-t', '--num_iterations',
-                        type=int, nargs=1, default=600,
+                        type=int, nargs=1, default=50,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-mp', '--sol_mut_prob',
                         type=float, nargs=1, default=0.2,
@@ -67,6 +68,8 @@ def parse_args():
     parser.add_argument('-c_p', '--cache_path', nargs=1, default=os.path.join('..', 'cache'),
                          help='The path to the directory in which to load and store the cached utility'\
                               + ' and travel time matrices')
+    parser.add_argument('-l_p', '--log_path', nargs=1, default=os.path.join('..', 'logs'),
+                         help='The path to the directory in which to store the results log')
 
     return parser.parse_args()
 
@@ -90,6 +93,24 @@ def route_score(candidade_route, util_weight=0.5, original_util=1, original_time
             (original_time / time_estimate.get_time(candidade_route)) * (1 - util_weight),)
     else:
         return (0,)
+
+
+def log_results(folder_path, mins, maxes, means, st_devs, best_solution):
+    now = datetime.now()
+    filename = now.strftime('results_%m_%d_%H_%M.txt')
+    path = os.path.join(folder_path, filename)
+    print(path)
+    with open(path, 'w') as f:
+        f.write('Route 25 Optimization\n')
+        f.write(now.strftime('Run on %m/%d at %H:%M\n'))
+        f.write(f'Best route: {best_solution}\n')
+        f.write(f'Best route fitness: {best_solution.fitness.values}\n')
+
+        for index, stats in enumerate(zip(mins, maxes, means, st_devs)):
+            (gen_min, gen_max, gen_mean, gen_std) = stats
+            f.write(f'------------------- Generation {index} -------------------\n')
+            f.write(f'Min fitness: {gen_min}, Max fitness: {gen_max}\n')
+            f.write(f'Average Fitness: {gen_mean}, Fitness Standard Deviation: {gen_std}\n')
 
 
 def main():
@@ -143,6 +164,8 @@ def main():
     # Variable keeping track of the number of generations
     g = 0
 
+    maxes, mins, means, st_devs = [], [], [], []
+
     # Begin the evolution
     while g < args.num_iterations:
         # A new generation
@@ -192,15 +215,17 @@ def main():
         sum2 = sum(x*x for x in fits)
         std = abs(sum2 / length - mean**2)**0.5
 
-        print("  Min %s" % min(fits))
-        print("  Max %s" % max(fits))
-        print("  Avg %s" % mean)
-        print("  Std %s" % std)
+        mins.append(min(fits))
+        maxes.append(max(fits))
+        means.append(mean)
+        st_devs.append(std)
 
     print("-- End of evolution --")
 
     best_ind = tools.selBest(pop, 1)[0]
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
+
+    log_results(args.log_path, mins, maxes, means, st_devs, best_ind)
 
 
 if __name__ == '__main__':
