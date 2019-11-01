@@ -13,8 +13,10 @@ from sklearn.metrics import mean_absolute_error
 
 from yellowbrick.regressor import ResidualsPlot
 
-UTIL_FILE = 'util.pkl'
-util_matrix = None        
+UTIL_FILE = '{}_util.pkl'
+util_matrix = np.array([])
+
+# each estimator should be an Scikit-Learn Regressor (or at least follow that API)
 UTIL_ESTIMATORS = {
     'linreg': LinearRegression(n_jobs=-1),
     'knn': KNeighborsRegressor(
@@ -121,14 +123,27 @@ def load(args):
     # We assign util_matrix a value within this function, so we need to explicit state that it's global
     global util_matrix
     
-    try:
-        with open(os.path.join(args.cache_path, UTIL_FILE)) as f:
-            util_matrix = pickle.load(f)
-    except:
-        print("Utilization matrix not found, creating one now")
+    pickle_path = os.path.join(args.cache_path, UTIL_FILE.format(args.util_estimator))
+    
+    if not args.force_util:
+        try:
+            with open(pickle_path, 'rb') as f:
+                print('Attempting to load utilization matrix')
+                util_matrix = pickle.load(f)
+            print('Utilization matrix loaded successfully')
+        except:
+            print("Utilization matrix could not be loaded")
+    
+    if not util_matrix.any():
+        print('Attempting to create new utilization matrix')
+        
         util_matrix = create_util_matrix(args, UTIL_ESTIMATORS[args.util_estimator])
+        
+        with open(pickle_path, 'wb') as f:
+            pickle.dump(util_matrix, f)
+        
         print('Utilization matrix created')
 
 
 def get_utilization(route):
-    return sum(route) * 4
+    return sum(util_matrix[route])

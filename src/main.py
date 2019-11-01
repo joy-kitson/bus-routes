@@ -56,27 +56,34 @@ def parse_args():
     parser.add_argument('-ue', '--util_estimator', choices=util_estimate.UTIL_ESTIMATORS.keys(),
                         default='forest',
                         help='Specifies which method to use to estimate stop utilization')
+    parser.add_argument('-uf', '--force_util', action='store_true',
+                        help='Use this flag if you want to generate a new utilization matrix'
+                             + ' even if one has been generated and saved using the specified'
+                             + ' utilization estimator in a previous run')
+    parser.add_argument('-up', '--plot-util', action='store true',
+                        help='Use this flag if you would like a plot of the residuals to be'
+                             + ' generated if a new utilization matrix is')
 
     # paths for various files
-    parser.add_argument('-s_p', '--stops_path',
+    parser.add_argument('-sp', '--stops_path',
                          nargs=1, default=os.path.join('..', 'data',
                                                        'route_25_valid.csv'),
                          help='The path to the csv file containg all of the potential and current'\
                               + ' stops')
-    parser.add_argument('-d_p', '--demo_path',
+    parser.add_argument('-dp', '--demo_path',
                          nargs=1, default=os.path.join('..', 'data', 'DemoByStops.csv'),
                          help='The path to the csv file containing the demographic data')
-    parser.add_argument('-e_p', '--emp_path',
+    parser.add_argument('-ep', '--emp_path',
                          nargs=1, default=os.path.join('..', 'data', 'Potential_Stops_wEmployment.csv'),
                          help='The path to the csv file containing the employment data')
-    parser.add_argument('-r_p', '--rider_path',
+    parser.add_argument('-rp', '--rider_path',
                          nargs=1, default=os.path.join('..', 'data',
                                                        'Stop_Riders_Ranking_by_Route_Daily_Totals_May_2019.csv'),
                          help='The path to the csv file containing the ridership data')
-    parser.add_argument('-c_p', '--cache_path', nargs=1, default=os.path.join('..', 'cache'),
+    parser.add_argument('-cp', '--cache_path', nargs=1, default=os.path.join('..', 'cache'),
                          help='The path to the directory in which to load and store the cached utility'\
                               + ' and travel time matrices')
-    parser.add_argument('-l_p', '--log_path', nargs=1, default=os.path.join('..', 'logs'),
+    parser.add_argument('-lp', '--log_path', nargs=1, default=os.path.join('..', 'logs'),
                          help='The path to the directory in which to store the results log')
 
     return parser.parse_args()
