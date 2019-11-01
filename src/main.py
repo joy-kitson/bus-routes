@@ -87,14 +87,6 @@ def valid_route(potential_route, distances):
     return True
 
 
-def route_score(candidade_route, util_weight=0.5, original_util=1, original_time=1, distances=None):
-    if valid_route(candidade_route, distances):
-        return ((util_estimate.get_utilization(candidade_route) / original_util) * util_weight + \
-            (original_time / time_estimate.get_time(candidade_route)) * (1 - util_weight),)
-    else:
-        return (0,)
-
-
 def log_results(folder_path, mins, maxes, means, st_devs, best_solution):
     now = datetime.now()
     filename = now.strftime('results_%m_%d_%H_%M')
@@ -126,7 +118,9 @@ def main():
 
     r25 = pd.read_csv(args.stops_path)
 
-    current_route = list(np.logical_not(np.isnan(r25[r25['Transfer'] == 'No']['CorrespondingStopID'].values)).astype(int))
+    transfer = r25[r25['Transfer'] == 'Yes']
+    non_transfer = r25[r25['Transfer'] == 'No']
+    current_route = list(np.logical_not(np.isnan(non_transfer['CorrespondingStopID'].values)).astype(int))
     NUM_STOPS = len(current_route)
 
     non_transfer_distances = list(r25[r25['Transfer'] == 'No']['Distance from initial stop (feet)'])
@@ -134,8 +128,22 @@ def main():
     time_estimate.load(args)
     util_estimate.load(args)
 
-    original_util = util_estimate.get_utilization(current_route)
-    original_time = time_estimate.get_time(current_route)
+    def stop_indices(route):
+        indices = [non_transfer.index[i] for (i, val) in enumerate(route) if val == 1]
+        indices += list(transfer.index.values)
+        indices.sort()
+        return indices
+
+    original_util = util_estimate.get_utilization(stop_indices(current_route))
+    original_time = time_estimate.get_time(stop_indices(current_route))
+
+    def route_score(candidade_route, util_weight=0.5):
+        if valid_route(candidade_route, non_transfer_distances):
+            indices = stop_indices(candidade_route)
+            return ((util_estimate.get_utilization(indices) / original_util) * util_weight + \
+                (original_time / time_estimate.get_time(indices)) * (1 - util_weight),)
+        else:
+            return (0,)
 
     # Register fitness measure and individual type with creator
     creator.create("Route_Fitness", base.Fitness,
@@ -152,10 +160,7 @@ def main():
 
     # Add evaluation, crossover, mutation, and selection to toolbox
     toolbox.register("evaluate", route_score,
-                     util_weight=args.util_weight[0],
-                     original_util=original_util,
-                     original_time=original_time,
-                     distances=non_transfer_distances)
+                     util_weight=args.util_weight[0])
     toolbox.register("crossover", tools.cxTwoPoint)
     toolbox.register("mutate", tools.mutFlipBit, indpb=args.ind_mut_prob)
     toolbox.register("select", tools.selTournament, tournsize=args.tournament_size)

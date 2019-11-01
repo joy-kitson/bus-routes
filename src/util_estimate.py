@@ -17,4 +17,4 @@ def load(args):
 
 
 def get_utilization(route):
-    return sum(route) * 4
+    return len(route) * 4
