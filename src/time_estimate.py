@@ -18,4 +18,4 @@ def load(args):
 
 
 def get_time(route):
-    return 40 + 0.5 * sum(route)
+    return 40 + 0.5 * len(route)
