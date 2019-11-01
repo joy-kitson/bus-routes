@@ -39,13 +39,13 @@ def parse_args():
     parser.add_argument('-t', '--num_iterations',
                         type=int, nargs=1, default=50,
                         help='The population size for the genetic algorithm')
-    parser.add_argument('-mp', '--sol_mut_prob',
+    parser.add_argument('-mpb', '--sol_mut_prob',
                         type=float, nargs=1, default=0.2,
                         help='The mutation probability for entire solutions for the genetic algorithm')
     parser.add_argument('-indpb', '--ind_mut_prob',
                         type=float, nargs=1, default=0.05,
                         help='The mutation probability for individual genes in a solution for the genetic algorithm')
-    parser.add_argument('-cp', '--crossover_prob',
+    parser.add_argument('-cpb', '--crossover_prob',
                         type=float, nargs=1, default=0.5,
                         help='The crossover probability for the genetic algorithm')
     parser.add_argument('-ts', '--tournament_size',
@@ -60,7 +60,7 @@ def parse_args():
                         help='Use this flag if you want to generate a new utilization matrix'
                              + ' even if one has been generated and saved using the specified'
                              + ' utilization estimator in a previous run')
-    parser.add_argument('-up', '--plot-util', action='store true',
+    parser.add_argument('-up', '--plot_util', action='store_true',
                         help='Use this flag if you would like a plot of the residuals to be'
                              + ' generated if a new utilization matrix is')
 

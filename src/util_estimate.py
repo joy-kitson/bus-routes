@@ -102,10 +102,11 @@ def create_util_matrix(args, model, preprocessing=None):
     model.fit(indeps, dep)
     print('On full data set, model has an R^2 value of {}'.format(model.score(indeps, dep)))
 
-    vis = ResidualsPlot(model)
-    vis.score(indeps, dep)
-    vis.finalize()
-    plt.savefig(os.path.join('..', 'plots', 'util_resids.png'))
+    if args.plot_util:
+        vis = ResidualsPlot(model)
+        vis.score(indeps, dep)
+        vis.finalize()
+        plt.savefig(os.path.join('..', 'plots', 'util_resids.png'))
 
     #merge in extra demographic data for the stops
     stop_data = pd.merge(stop_data, emp_data, on='Formatted FIPS')
