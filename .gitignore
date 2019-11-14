@@ -1,3 +1,8 @@
+# large generated files
+logs/*
+cache/*
+plots/*
+
 # vscode junk
 .vscode/
 

@@ -7,7 +7,7 @@ def create_time_matrix():
     pass
 
 
-def load():
+def load(args):
     try:
         with open('..//models//time_models//time_matrix.pkl') as f:
             time_matrix = pickle.load(f)
@@ -18,7 +18,4 @@ def load():
 
 
 def get_time(route):
-    if time_matrix is None:
-        raise(ValueError('You have not yet loaded the time matrix'))
-    else:
-        pass
+    return 40 + 0.5 * len(route)
