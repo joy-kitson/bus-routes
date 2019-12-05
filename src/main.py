@@ -91,6 +91,8 @@ def parse_args():
                               + ' and travel time matrices')
     parser.add_argument('-lp', '--log_path', nargs=1, default=os.path.join('..', 'logs'),
                          help='The path to the directory in which to store the results log')
+    parser.add_argument('-pp', '--plot_path', nargs=1, default=os.path.join('..', 'plots'),
+                         help='The path to the directory in which to store any generated plots')
 
     return parser.parse_args()
 

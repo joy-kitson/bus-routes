@@ -123,13 +123,13 @@ def create_util_matrix(args, model, preprocessing=None):
         ax.set(xlabel='True Average Utilization',
                ylabel='Predicted Average Utilization',
                title='Residuals for {} Model'.format(FULL_NAMES[args.util_estimator]))
-        plt.savefig('{}_resids_plot.png'.format(args.util_estimator))
+        plt.savefig(os.path.join(args.plot_path, '{}_resids_plot.png'.format(args.util_estimator)))
 
         plt.hist(fold_ests)
         ax.set(xlabel='Predicted Average Utilization',
                ylabel='Frequency',
                title='Distribution of {} Utilization Predictions'.format(FULL_NAMES[args.util_estimator]))
-        plt.savefig('{}_histogram.png'.format(args.util_estimator))
+        plt.savefig(os.path.join(args.plot_path, '{}_histogram.png'.format(args.util_estimator)))
 
 
     model.fit(indeps, dep)
