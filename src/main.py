@@ -40,7 +40,7 @@ def parse_args():
                         type=int, nargs=1, default=400,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-t', '--num_iterations',
-                        type=int, nargs=1, default=10,
+                        type=int, nargs=1, default=600,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-mpb', '--sol_mut_prob',
                         type=float, nargs=1, default=0.2,
