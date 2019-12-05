@@ -37,25 +37,25 @@ def parse_args():
 
     # parameters for genetic algorithm
     parser.add_argument('-ps', '--pop_size',
-                        type=int, nargs=1, default=400,
+                        type=int, default=400,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-t', '--num_iterations',
-                        type=int, nargs=1, default=600,
+                        type=int, default=600,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-mpb', '--sol_mut_prob',
-                        type=float, nargs=1, default=0.2,
+                        type=float, default=0.2,
                         help='The mutation probability for entire solutions for the genetic algorithm')
     parser.add_argument('-indpb', '--ind_mut_prob',
-                        type=float, nargs=1, default=0.05,
+                        type=float, default=0.05,
                         help='The mutation probability for individual genes in a solution for the genetic algorithm')
     parser.add_argument('-onepb', '--init_one_prob',
-                        type=float, nargs=1, default=0.05,
+                        type=float, default=0.05,
                         help='The probability of a gene being 1 in the initial population')
     parser.add_argument('-cpb', '--crossover_prob',
-                        type=float, nargs=1, default=0.5,
+                        type=float, default=0.5,
                         help='The crossover probability for the genetic algorithm')
     parser.add_argument('-ts', '--tournament_size',
-                        type=int, nargs=1, default=3,
+                        type=int, default=3,
                         help='The tournament size for the genetic algorithm')
 
     # arguments for utilisation estimation
@@ -138,6 +138,11 @@ def log_results(folder_path, maxes, mins, means, st_devs, max_util, min_time, be
                             'Min Time': min_time})
     results.to_csv(csv_path, index=False)
 
+def stop_indices(route, non_transfer, transfer):
+    indices = [non_transfer.index[i] for (i, val) in enumerate(route) if val == 1]
+    indices += list(transfer.index.values)
+    indices.sort()
+    return indices
 
 def main():
     args = parse_args()
@@ -154,16 +159,10 @@ def main():
     time_estimate.load(args)
     util_estimate.load(args)
 
-    def stop_indices(route):
-        indices = [non_transfer.index[i] for (i, val) in enumerate(route) if val == 1]
-        indices += list(transfer.index.values)
-        indices.sort()
-        return indices
-
     # print(util_estimate.get_individual_util(stop_indices([1] * 531)))
     # quit()
 
-    current_route_indices = stop_indices(current_route)
+    current_route_indices = stop_indices(current_route, non_transfer, transfer)
     original_util = util_estimate.get_utilization(current_route_indices)
     original_time = time_estimate.get_time(current_route_indices)
 
@@ -175,7 +174,7 @@ def main():
 
     def route_score(candidade_route):
         if valid_route(candidade_route, non_transfer_distances):
-            indices = stop_indices(candidade_route)
+            indices = stop_indices(candidade_route, non_transfer, transfer)
             util = util_estimate.get_utilization(indices)
             time = time_estimate.get_time(indices)
             utils.append(util)
@@ -218,6 +217,7 @@ def main():
     maxes, mins, means, stdevs, max_utils, min_times = [], [], [], [], [], []
 
     # Begin the evolution
+    print(args.num_iterations)
     while g < args.num_iterations:
         # A new generation
         g = g + 1
@@ -281,9 +281,9 @@ def main():
     print("-- End of evolution --")
 
     best_ind = tools.selBest(pop, 1)[0]
-    best_indices = stop_indices(best_ind)
+    best_indices = stop_indices(best_ind, non_transfer, transfer)
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
-    print(f"The best route has {len(stop_indices(best_ind))} stops")
+    print(f"The best route has {len(stop_indices(best_ind, non_transfer, transfer))} stops")
     print(f"This route has estimated utilization {util_estimate.get_utilization(best_indices)}")
     print(f"This route has estimated time {time_estimate.get_time(best_indices)}")
 
