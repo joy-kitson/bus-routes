@@ -113,9 +113,9 @@ def create_util_matrix(args, model, preprocessing=None):
     
     utils = model.predict(stop_data[indep_cols])
     # TODO: finish getting actual ridership data for existing stops
-    for i, row in stop_data.iterrows():
-        if not np.isnan(row['StopId']):
-            utils[i] = ridership_data[ridership_data['StopId'] == row['StopId']]['IndividUtilization'].values[0]
+    # for i, row in stop_data.iterrows():
+    #    if not np.isnan(row['StopId']):
+    #        utils[i] = ridership_data[ridership_data['StopId'] == row['StopId']]['IndividUtilization'].values[0]
 
     return utils
 
@@ -148,3 +148,7 @@ def load(args):
 
 def get_utilization(route):
     return sum(util_matrix[route])
+
+
+def get_individual_util(route):
+    return util_matrix[route]
