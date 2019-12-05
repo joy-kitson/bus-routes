@@ -11,6 +11,7 @@ from sklearn.model_selection import KFold
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
 
+from seaborn import scatterplot, distplot
 from yellowbrick.regressor import ResidualsPlot
 
 UTIL_FILE = '{}_util.pkl'
@@ -34,6 +35,11 @@ UTIL_ESTIMATORS = {
     ),
 }
 
+FULL_NAMES = {
+    'linreg': 'Linear Regression',
+    'knn': 'K Nearest Neighbors',
+    'forest': 'Random Forest'
+}
 
 def create_util_matrix(args, model, preprocessing=None):
     # parse the stop data
@@ -90,32 +96,55 @@ def create_util_matrix(args, model, preprocessing=None):
     # perform k-fold cross validation to get our R^2 value
     kf = KFold(n_splits=10)
     abs_err = 0
+    fold_actuals = []
+    fold_ests = []
+    fold_resids = []
     for train_indices, test_indices in kf.split(indeps):
         fold_model = deepcopy(model)
         fold_model.fit(indeps.iloc[train_indices], dep.iloc[train_indices])
         fold_preds = fold_model.predict(indeps.iloc[test_indices])
         abs_err += mean_absolute_error(dep.iloc[test_indices], fold_preds)
+
+        if args.plot_util:
+            # gather test results for plotting
+            fold_actuals.append(dep.iloc[test_indices])
+            fold_ests.append(fold_preds)
+            fold_resids.append(fold_preds - dep.iloc[test_indices])
     n_folds = kf.get_n_splits(indeps)
     abs_err /= n_folds
     print('Model trained with mean absolute error of {} across {} folds'.format(abs_err, n_folds))
 
+    if args.plot_util:
+        fold_actuals = np.concatenate(fold_actuals)
+        fold_ests = np.concatenate(fold_ests)
+        fold_resids = np.concatenate(fold_resids)
+
+        ax = scatterplot(x=fold_actuals, y=fold_resids)
+        ax.set(xlabel='True Average Utilization',
+               ylabel='Predicted Average Utilization',
+               title='Residuals for {} Model'.format(FULL_NAMES[args.util_estimator]))
+        plt.savefig(os.path.join(args.plot_path, '{}_resids_plot.png'.format(args.util_estimator)))
+
+        plt.hist(fold_ests)
+        ax.set(xlabel='Predicted Average Utilization',
+               ylabel='Frequency',
+               title='Distribution of {} Utilization Predictions'.format(FULL_NAMES[args.util_estimator]))
+        plt.savefig(os.path.join(args.plot_path, '{}_histogram.png'.format(args.util_estimator)))
+
+
     model.fit(indeps, dep)
     print('On full data set, model has an R^2 value of {}'.format(model.score(indeps, dep)))
-
-    if args.plot_util:
-        vis = ResidualsPlot(model)
-        vis.score(indeps, dep)
-        vis.finalize()
-        plt.savefig(os.path.join('..', 'plots', 'util_resids.png'))
 
     #merge in extra demographic data for the stops
     stop_data = pd.merge(stop_data, emp_data, on='Formatted FIPS')
     
     utils = model.predict(stop_data[indep_cols])
-    # TODO: finish getting actual ridership data for existing stops
-    for i, row in stop_data.iterrows():
-        if not np.isnan(row['StopId']):
-            utils[i] = ridership_data[ridership_data['StopId'] == row['StopId']]['IndividUtilization'].values[0]
+    
+    # For now, use the predictions instead of the actual utilization, since our predictions tend to be larger than
+    # the actual values
+    # for i, row in stop_data.iterrows():
+    #    if not np.isnan(row['StopId']):
+    #        utils[i] = ridership_data[ridership_data['StopId'] == row['StopId']]['IndividUtilization'].values[0]
 
     return utils
 
@@ -148,3 +177,7 @@ def load(args):
 
 def get_utilization(route):
     return sum(util_matrix[route])
+
+
+def get_individual_util(route):
+    return util_matrix[route]
