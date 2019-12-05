@@ -23,10 +23,10 @@ def load_locs(locs_path=LOCS_PATH):
     return loc_data
 
 def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=None, out_path=None):
-    if stop_data == None:
+    if stop_data is None:
         stop_data = load_stops()
 
-    if loc_data == None:
+    if loc_data is None:
         loc_data = load_locs()
     
     stop_locs = pd.merge(stop_data, loc_data, on=ID_COL)
@@ -39,7 +39,7 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
     # Plot full bus route
     folium.PolyLine(loc_data[['Lat', 'Long']]).add_to(route_map)
 
-    if stop_indices == None:
+    if stop_indices is None:
         # partition the stop data into current and candidate stops
         mask = stop_locs['CorrespondingStopID'].isna()
         candi_stops = stop_locs[mask]
@@ -57,7 +57,7 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
                 icon=folium.Icon(color='red')
             ).add_to(route_map)
 
-        if out_path == None:
+        if out_path is None:
             route_map.save(os.path.join('..', 'plots', 'all_stops_map.html'))
     
     else:
@@ -76,8 +76,11 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
                 icon=folium.Icon(color='blue')
             ).add_to(route_map)
 
-        if out_path == None:
+        if out_path is None:
             route_map.save(os.path.join('..', 'plots', 'solution_map.html'))
+    
+    if out_path is not None:
+        route_map.save(out_path)
 
 def parse_list(string):
     # Get rid of brackets on either end
