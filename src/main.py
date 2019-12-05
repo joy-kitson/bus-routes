@@ -40,7 +40,7 @@ def parse_args():
                         type=int, nargs=1, default=400,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-t', '--num_iterations',
-                        type=int, nargs=1, default=600,
+                        type=int, nargs=1, default=10,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-mpb', '--sol_mut_prob',
                         type=float, nargs=1, default=0.2,
@@ -108,7 +108,7 @@ def valid_route(potential_route, distances):
     return True
 
 
-def log_results(folder_path, maxes, mins, means, st_devs, max_util, min_time, best_solution):
+def log_results(folder_path, maxes, mins, means, st_devs, max_util, min_time, best_solution, util_weight, time_weight):
     now = datetime.now()
     filename = now.strftime('results_%m_%d_%H_%M')
     txt_path = os.path.join(folder_path, filename + '.txt')
@@ -117,6 +117,7 @@ def log_results(folder_path, maxes, mins, means, st_devs, max_util, min_time, be
     with open(txt_path, 'w') as f:
         f.write('Route 25 Optimization\n')
         f.write(now.strftime('Run on %m/%d at %H:%M\n'))
+        f.write(f'Utilization Weight: {util_weight}, Time Weight: {time_weight}, Current Route Score: {util_weight - time_weight}\n')
         f.write(f'Best route: {best_solution}\n')
         f.write(f'Best route fitness: {best_solution.fitness.values}\n')
 
@@ -284,7 +285,7 @@ def main():
     print(f"This route has estimated utilization {util_estimate.get_utilization(best_indices)}")
     print(f"This route has estimated time {time_estimate.get_time(best_indices)}")
 
-    log_results(args.log_path, maxes, mins, means, stdevs, max_utils, min_times, best_ind)
+    log_results(args.log_path, maxes, mins, means, stdevs, max_utils, min_times, best_ind, args.util_weight[0], args.time_weight[0])
 
 
 if __name__ == '__main__':
