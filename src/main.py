@@ -40,7 +40,7 @@ def parse_args():
                         type=int, nargs=1, default=400,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-t', '--num_iterations',
-                        type=int, nargs=1, default=10,
+                        type=int, nargs=1, default=500,
                         help='The population size for the genetic algorithm')
     parser.add_argument('-mpb', '--sol_mut_prob',
                         type=float, nargs=1, default=0.2,
@@ -108,7 +108,7 @@ def valid_route(potential_route, distances):
     return True
 
 
-def log_results(folder_path, maxes, mins, means, st_devs, max_util, min_time, best_solution, util_weight, time_weight):
+def log_results(folder_path, maxes, mins, means, st_devs, max_util, min_time, mean_util, mean_time, best_solution, util_weight, time_weight):
     now = datetime.now()
     filename = now.strftime('results_%m_%d_%H_%M')
     txt_path = os.path.join(folder_path, filename + '.txt')
@@ -133,7 +133,9 @@ def log_results(folder_path, maxes, mins, means, st_devs, max_util, min_time, be
                             'Mean Score': means,
                             'Standard Deviation': st_devs,
                             'Max Util': max_util,
-                            'Min Time': min_time})
+                            'Mean Util': mean_util,
+                            'Min Time': min_time,
+                            'Mean Time': mean_time})
     results.to_csv(csv_path, index=False)
 
 
@@ -213,7 +215,7 @@ def main():
     # Variable keeping track of the number of generations
     g = 0
 
-    maxes, mins, means, stdevs, max_utils, min_times = [], [], [], [], [], []
+    maxes, mins, means, stdevs, max_utils, min_times, mean_utils, mean_times = [], [], [], [], [], [], [], []
 
     # Begin the evolution
     while g < args.num_iterations:
@@ -273,8 +275,15 @@ def main():
             maxes.append(best_score)
             means.append(mean)
             stdevs.append(std)
+
             max_utils.append(max(utils))
+            mean_utils.append(sum(utils)/len(utils))
+
             min_times.append(min(times))
+            mean_times.append(sum(times)/len(times))
+
+        utils.clear()
+        utils.clear()
 
     print("-- End of evolution --")
 
@@ -285,7 +294,7 @@ def main():
     print(f"This route has estimated utilization {util_estimate.get_utilization(best_indices)}")
     print(f"This route has estimated time {time_estimate.get_time(best_indices)}")
 
-    log_results(args.log_path, maxes, mins, means, stdevs, max_utils, min_times, best_ind, args.util_weight[0], args.time_weight[0])
+    log_results(args.log_path, maxes, mins, means, stdevs, max_utils, min_times, mean_utils, mean_times, best_ind, args.util_weight[0], args.time_weight[0])
 
 
 if __name__ == '__main__':
