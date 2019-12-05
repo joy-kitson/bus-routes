@@ -44,13 +44,25 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
         mask = stop_locs['CorrespondingStopID'].isna()
         candi_stops = stop_locs[mask]
         cur_stops = stop_locs[~mask]
+        
+        transfer = cur_stops[cur_stops['Transfer'] == 'Yes']
+        non_transfer = cur_stops[cur_stops['Transfer'] == 'No']
+        
+        # Plot all transfer stops as blue icons
+        for i, row in transfer.iterrows():
+            folium.Marker(
+                location=row[['Lat', 'Long']],
+                icon=folium.Icon(color='green')
+            ).add_to(route_map)
 
-        for i, row in cur_stops.iterrows():
+        # Plot all current, non-transfer stops as blue icons
+        for i, row in non_transfer.iterrows():
             folium.Marker(
                 location=row[['Lat', 'Long']],
                 icon=folium.Icon(color='blue')
             ).add_to(route_map)
         
+        # Plot all candidate stops as red icons
         for i, row in candi_stops.iterrows():
             folium.Marker(
                 location=row[['Lat', 'Long']],
