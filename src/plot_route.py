@@ -5,8 +5,6 @@ import folium
 import os
 import pandas as pd
 
-from main import parse_stop_indices 
-
 STOPS_PATH = os.path.join('..', 'data', 'route_25_valid.csv')
 LOCS_PATH = os.path.join('..', 'data', 'LongLat_of_AllStops.csv')
 ID_COL = 'UniqueNum'
@@ -24,7 +22,7 @@ def load_locs(locs_path=LOCS_PATH):
                            usecols=['Lat', 'Long', ID_COL])
     return loc_data
 
-def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=None):
+def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=None, out_path=None):
     if stop_data == None:
         stop_data = load_stops()
 
@@ -59,15 +57,18 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
                 icon=folium.Icon(color='red')
             ).add_to(route_map)
 
-        route_map.save('all_stops_map.html')
+        if out_path == None:
+            route_map.save(os.path.join('..', 'plots', 'all_stops_map.html'))
     
     else:
-        mask = stop_locs['Transfer'] == 'Yes'
-        transfer = stop_locs[mask]
-        non_transfer = stop_locs[~mask]
+        transfer = stop_locs[stop_locs['Transfer'] == 'Yes']
+        non_transfer = stop_locs[stop_locs['Transfer'] == 'No']
 
         if not indices_parsed:
+            print(sum(stop_indices))
+            from main import parse_stop_indices 
             stop_indices = parse_stop_indices(stop_indices, non_transfer, transfer)
+            print(len(stop_indices))
 
         for i, row in stop_locs.iloc[stop_indices].iterrows():
             folium.Marker(
@@ -75,11 +76,25 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
                 icon=folium.Icon(color='blue')
             ).add_to(route_map)
 
+        if out_path == None:
+            route_map.save(os.path.join('..', 'plots', 'solution_map.html'))
 
-def main():
+def parse_list(string):
+    # Get rid of brackets on either end
+    string = string.replace(']','').replace('[','')
+    
+    # Split string up by the commas
+    string_list = string.split(', ')
+
+    # convert entries into ints
+    int_list = [int(n) for n in string_list]
+
+    return int_list
+
+def main(): 
     indices = None
     if len(sys.argv) == 2:
-        indices = list(sys.argv[1])
+        indices = parse_list(sys.argv[1])
 
     plot_route(indices, indices_parsed=False)
 
