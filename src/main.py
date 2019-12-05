@@ -5,6 +5,7 @@ import random
 import pickle
 import os
 from datetime import datetime
+import math
 
 import pandas as pd
 import numpy as np
@@ -29,6 +30,8 @@ def parse_args():
     # Positional args:
     parser.add_argument('util_weight', type=float, nargs=1,
                         help='The weight of the utilization in the route score')
+    parser.add_argument('time_weight', type=float, nargs=1,
+                        help='The weight of the utilization in the route score')
 
     # Optional args:
 
@@ -45,6 +48,9 @@ def parse_args():
     parser.add_argument('-indpb', '--ind_mut_prob',
                         type=float, nargs=1, default=0.05,
                         help='The mutation probability for individual genes in a solution for the genetic algorithm')
+    parser.add_argument('-onepb', '--init_one_prob',
+                        type=float, nargs=1, default=0.05,
+                        help='The probability of a gene being 1 in the initial population')
     parser.add_argument('-cpb', '--crossover_prob',
                         type=float, nargs=1, default=0.5,
                         help='The crossover probability for the genetic algorithm')
@@ -102,7 +108,7 @@ def valid_route(potential_route, distances):
     return True
 
 
-def log_results(folder_path, mins, maxes, means, st_devs, best_solution):
+def log_results(folder_path, maxes, mins, means, st_devs, max_util, min_time, best_solution):
     now = datetime.now()
     filename = now.strftime('results_%m_%d_%H_%M')
     txt_path = os.path.join(folder_path, filename + '.txt')
@@ -114,17 +120,19 @@ def log_results(folder_path, mins, maxes, means, st_devs, best_solution):
         f.write(f'Best route: {best_solution}\n')
         f.write(f'Best route fitness: {best_solution.fitness.values}\n')
 
-        for index, stats in enumerate(zip(mins, maxes, means, st_devs)):
-            (gen_min, gen_max, gen_mean, gen_std) = stats
+        for index, stats in enumerate(zip(mins, maxes, means)):
+            (gen_min, gen_max, gen_mean) = stats
             f.write(f'------------------- Generation {index} -------------------\n')
             f.write(f'Min fitness: {gen_min}, Max fitness: {gen_max}\n')
-            f.write(f'Average Fitness: {gen_mean}, Fitness Standard Deviation: {gen_std}\n')
+            f.write(f'Average Fitness: {gen_mean}\n')
 
     results = pd.DataFrame({'Generation': list(range(len(mins))),
                             'Min Score': mins,
                             'Max Score': maxes,
                             'Mean Score': means,
-                            'Standard Deviation': st_devs})
+                            'Standard Deviation': st_devs,
+                            'Max Util': max_util,
+                            'Min Time': min_time})
     results.to_csv(csv_path, index=False)
 
 
@@ -149,33 +157,45 @@ def main():
         indices.sort()
         return indices
 
-    original_util = util_estimate.get_utilization(stop_indices(current_route))
-    original_time = time_estimate.get_time(stop_indices(current_route))
+    # print(util_estimate.get_individual_util(stop_indices([1] * 531)))
+    # quit()
 
-    def route_score(candidade_route, util_weight=0.5):
+    current_route_indices = stop_indices(current_route)
+    original_util = util_estimate.get_utilization(current_route_indices)
+    original_time = time_estimate.get_time(current_route_indices)
+
+    print(f"The original route has {len(current_route_indices)} stops\nIs estimated to have a utilization of: {original_util} and a time of: {original_time}")
+
+    weights = (args.util_weight[0]/original_util, -args.time_weight[0]/(original_time**2))
+
+    utils, times = [], []
+
+    def route_score(candidade_route):
         if valid_route(candidade_route, non_transfer_distances):
             indices = stop_indices(candidade_route)
-            return ((util_estimate.get_utilization(indices) / original_util) * util_weight + \
-                (original_time / time_estimate.get_time(indices)) * (1 - util_weight),)
+            util = util_estimate.get_utilization(indices)
+            time = time_estimate.get_time(indices)
+            utils.append(util)
+            times.append(time)
+            return ((weights[0] * util) + (weights[1] * time**2),)
         else:
-            return (0,)
+            return (float('-inf'),)
 
     # Register fitness measure and individual type with creator
     creator.create("Route_Fitness", base.Fitness,
-                   weights=(1.0,))
+                   weights=(1,))
     creator.create("Individual", list, fitness=creator.Route_Fitness)
 
     toolbox = base.Toolbox()
 
     # Add attribute, individual, and population types to toolbox
-    toolbox.register("attr_bool", np.random.choice, [0, 1], p=[.95, .05])
+    toolbox.register("attr_bool", np.random.choice, [0, 1], p=[1 - args.init_one_prob, args.init_one_prob])
     toolbox.register("individual", tools.initRepeat, creator.Individual,
                     toolbox.attr_bool, NUM_STOPS)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
     # Add evaluation, crossover, mutation, and selection to toolbox
-    toolbox.register("evaluate", route_score,
-                     util_weight=args.util_weight[0])
+    toolbox.register("evaluate", route_score)
     toolbox.register("crossover", tools.cxTwoPoint)
     toolbox.register("mutate", tools.mutFlipBit, indpb=args.ind_mut_prob)
     toolbox.register("select", tools.selTournament, tournsize=args.tournament_size)
@@ -192,7 +212,7 @@ def main():
     # Variable keeping track of the number of generations
     g = 0
 
-    maxes, mins, means, st_devs = [], [], [], []
+    maxes, mins, means, stdevs, max_utils, min_times = [], [], [], [], [], []
 
     # Begin the evolution
     while g < args.num_iterations:
@@ -236,24 +256,35 @@ def main():
         pop[:] = offspring
 
         # Gather all the fitnesses in one list and print the stats
-        fits = [ind.fitness.values[0] for ind in pop]
+        fits = [ind.fitness for ind in pop]
+        if g % 5 == 0:
+            route_scores = [fit.values[0] for fit in fits if fit.values[0] > float('-inf')]
 
-        length = len(pop)
-        mean = sum(fits) / length
-        sum2 = sum(x*x for x in fits)
-        std = abs(sum2 / length - mean**2)**0.5
+            length = len(route_scores)
+            mean = sum(route_scores) / length
+            sum2 = sum(x*x for x in route_scores) / length
+            std = abs(sum2 - mean**2)**0.5
 
-        mins.append(min(fits))
-        maxes.append(max(fits))
-        means.append(mean)
-        st_devs.append(std)
+            best_score = max(route_scores)
+            best_route = route_scores.index(best_score)
+
+            mins.append(min(route_scores))
+            maxes.append(best_score)
+            means.append(mean)
+            stdevs.append(std)
+            max_utils.append(max(utils))
+            min_times.append(min(times))
 
     print("-- End of evolution --")
 
     best_ind = tools.selBest(pop, 1)[0]
+    best_indices = stop_indices(best_ind)
     print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
+    print(f"The best route has {len(stop_indices(best_ind))} stops")
+    print(f"This route has estimated utilization {util_estimate.get_utilization(best_indices)}")
+    print(f"This route has estimated time {time_estimate.get_time(best_indices)}")
 
-    log_results(args.log_path, mins, maxes, means, st_devs, best_ind)
+    log_results(args.log_path, maxes, mins, means, stdevs, max_utils, min_times, best_ind)
 
 
 if __name__ == '__main__':

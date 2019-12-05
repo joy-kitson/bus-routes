@@ -139,9 +139,12 @@ def create_util_matrix(args, model, preprocessing=None):
     stop_data = pd.merge(stop_data, emp_data, on='Formatted FIPS')
     
     utils = model.predict(stop_data[indep_cols])
-    for i, row in stop_data.iterrows():
-        if not np.isnan(row['StopId']):
-            utils[i] = ridership_data[ridership_data['StopId'] == row['StopId']]['IndividUtilization'].values[0]
+    
+    # For now, use the predictions instead of the actual utilization, since our predictions tend to be larger than
+    # the actual values
+    # for i, row in stop_data.iterrows():
+    #    if not np.isnan(row['StopId']):
+    #        utils[i] = ridership_data[ridership_data['StopId'] == row['StopId']]['IndividUtilization'].values[0]
 
     return utils
 
@@ -174,3 +177,7 @@ def load(args):
 
 def get_utilization(route):
     return sum(util_matrix[route])
+
+
+def get_individual_util(route):
+    return util_matrix[route]
