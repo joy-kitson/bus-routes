@@ -45,7 +45,7 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
 
     if stop_indices is None:
         if out_path is None:
-            out_path = os.path.join('..', 'plots', 'stop_map.html')
+            out_path = os.path.join('..', 'plots', 'current_map.html')
     else:
         if not indices_parsed:
             from main import parse_stop_indices 
@@ -61,7 +61,7 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
             out_path = os.path.join('..', 'plots', 'solution_map.html')
 
     # partition the stop data into current and candidate stops
-    mask = non_transfer['CorrespondingStopID'].isna()
+    mask = non_transfer['CorrespondingStopID'].isnull()
     candi_stops = non_transfer[mask]
     cur_stops = non_transfer[~mask]
     
@@ -73,12 +73,13 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
         ).add_to(route_map)
 
     # Plot all current, non-transfer stops as blue icons
-    for i, row in non_transfer.iterrows():
+    for i, row in cur_stops.iterrows():
         folium.Marker(
             location=row[['Lat', 'Long']],
             icon=folium.Icon(color='orange')
         ).add_to(route_map)
-    
+
+
     # Plot all candidate stops as red icons
     for i, row in candi_stops.iterrows():
         folium.Marker(
@@ -86,6 +87,7 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
             icon=folium.Icon(color='red')
         ).add_to(route_map)
     
+    print('Saving route map to {}'.format(out_path))
     route_map.save(out_path)
 
 def parse_list(string):
