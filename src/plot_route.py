@@ -45,7 +45,7 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
 
     if stop_indices is None:
         if out_path is None:
-            out_path = os.path.join('..', 'plots', 'current_map.html')
+            out_path = os.path.join('..', 'plots', 'all_stops_map.html')
     else:
         if not indices_parsed:
             from main import parse_stop_indices 
