@@ -72,7 +72,7 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
             icon=folium.Icon(color='blue')
         ).add_to(route_map)
 
-    # Plot all current, non-transfer stops as blue icons
+    # Plot all current, non-transfer stops as orange icons
     for i, row in cur_stops.iterrows():
         folium.Marker(
             location=row[['Lat', 'Long']],
