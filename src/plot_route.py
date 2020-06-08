@@ -72,7 +72,7 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
             icon=folium.Icon(color='blue')
         ).add_to(route_map)
 
-    # Plot all current, non-transfer stops as orange icons
+    # Plot all non-transfer stops on the existing route as orange icons
     for i, row in cur_stops.iterrows():
         folium.Marker(
             location=row[['Lat', 'Long']],
@@ -80,7 +80,7 @@ def plot_route(stop_indices=None, indices_parsed=True, stop_data=None, loc_data=
         ).add_to(route_map)
 
 
-    # Plot all candidate stops as red icons
+    # Plot all non-transfer stops which AREN'T on the existing route as red icons
     for i, row in candi_stops.iterrows():
         folium.Marker(
             location=row[['Lat', 'Long']],
